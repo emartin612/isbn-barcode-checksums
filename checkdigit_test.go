@@ -43,6 +43,55 @@ func TestUPCA(t *testing.T) {
 	}
 }
 
+func TestISSN(t *testing.T) {
+	if !ValidateISSN("0378-5955") {
+		t.Error("expected valid ISSN")
+	}
+	if ValidateISSN("0378-5954") {
+		t.Error("expected invalid ISSN (wrong check digit)")
+	}
+	if ValidateISSN("0378-595") {
+		t.Error("expected invalid ISSN (too short)")
+	}
+}
+
+func TestISSNCheckDigitX(t *testing.T) {
+	// Prefixes that land on a check value of 10 use 'X', the same
+	// convention as ISBN-10.
+	digit, err := ISSNCheckDigit("1000002")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if digit != 'X' {
+		t.Errorf("got check digit %q, want 'X'", digit)
+	}
+	if !ValidateISSN("1000002X") {
+		t.Error("expected valid ISSN with X check digit")
+	}
+}
+
+func TestCode39(t *testing.T) {
+	digit, err := Code39CheckChar("CODE39")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if digit != 'W' {
+		t.Errorf("got check char %q, want 'W'", digit)
+	}
+	if !ValidateCode39("CODE39W") {
+		t.Error("expected valid Code 39 data")
+	}
+	if ValidateCode39("CODE39X") {
+		t.Error("expected invalid Code 39 data (wrong check char)")
+	}
+	if ValidateCode39("") {
+		t.Error("expected invalid Code 39 data (empty)")
+	}
+	if ValidateCode39("ABC?1") {
+		t.Error("expected invalid Code 39 data (character outside the set)")
+	}
+}
+
 func TestValidateStream(t *testing.T) {
 	input := strings.Join([]string{
 		"0-306-40615-2",  // valid ISBN-10

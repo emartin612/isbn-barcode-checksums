@@ -1,6 +1,6 @@
 // Package checkdigit computes and verifies the check digits used by common
 // book and retail barcode formats: ISBN-10, ISBN-13 (which shares its
-// algorithm with EAN-13), and UPC-A.
+// algorithm with EAN-13), UPC-A, ISSN, and Code 39.
 package checkdigit
 
 import "errors"
@@ -186,4 +186,158 @@ func CheckUPCA(s string) error {
 // ValidateUPCA is a convenience wrapper around CheckUPCA.
 func ValidateUPCA(s string) bool {
 	return CheckUPCA(s) == nil
+}
+
+// ISSNCheckDigit computes the check character for a 7-digit ISSN prefix
+// using descending weights 8 down to 2. The result is '0'-'9' or 'X' (for a
+// check value of 10).
+func ISSNCheckDigit(prefix string) (byte, error) {
+	if len(prefix) != 7 {
+		return 0, ErrInvalidLength
+	}
+	sum := 0
+	for i := 0; i < 7; i++ {
+		c := prefix[i]
+		if c < '0' || c > '9' {
+			return 0, ErrInvalidDigit
+		}
+		sum += int(c-'0') * (8 - i)
+	}
+	check := 11 - sum%11
+	switch check {
+	case 11:
+		return '0', nil
+	case 10:
+		return 'X', nil
+	default:
+		return byte('0' + check), nil
+	}
+}
+
+// CheckISSN reports whether s (after removing hyphens and spaces) is a
+// valid 8-digit ISSN, including the trailing check character.
+func CheckISSN(s string) error {
+	digits := Clean(s)
+	if len(digits) != 8 {
+		return ErrInvalidLength
+	}
+	want, err := ISSNCheckDigit(digits[:7])
+	if err != nil {
+		return err
+	}
+	got := digits[7]
+	if got == 'x' {
+		got = 'X'
+	}
+	if got != 'X' && (got < '0' || got > '9') {
+		return ErrInvalidDigit
+	}
+	if got != want {
+		return ErrChecksumMismatch
+	}
+	return nil
+}
+
+// ValidateISSN is a convenience wrapper around CheckISSN.
+func ValidateISSN(s string) bool {
+	return CheckISSN(s) == nil
+}
+
+// code39Value returns the position (0-42) of c in the Code 39 character
+// set, used both as the character's point value and, run in reverse, to
+// turn a computed check value back into a character.
+func code39Value(c byte) (int, bool) {
+	switch {
+	case c >= '0' && c <= '9':
+		return int(c - '0'), true
+	case c >= 'A' && c <= 'Z':
+		return int(c-'A') + 10, true
+	}
+	switch c {
+	case '-':
+		return 36, true
+	case '.':
+		return 37, true
+	case ' ':
+		return 38, true
+	case '$':
+		return 39, true
+	case '/':
+		return 40, true
+	case '+':
+		return 41, true
+	case '%':
+		return 42, true
+	default:
+		return 0, false
+	}
+}
+
+func code39Char(v int) byte {
+	switch {
+	case v < 10:
+		return byte('0' + v)
+	case v < 36:
+		return byte('A' + v - 10)
+	}
+	switch v {
+	case 36:
+		return '-'
+	case 37:
+		return '.'
+	case 38:
+		return ' '
+	case 39:
+		return '$'
+	case 40:
+		return '/'
+	case 41:
+		return '+'
+	default:
+		return '%'
+	}
+}
+
+// Code39CheckChar computes the mod-43 check character for data, the encoded
+// content of a Code 39 barcode between (but not including) its start and
+// stop '*' delimiters.
+func Code39CheckChar(data string) (byte, error) {
+	if data == "" {
+		return 0, ErrInvalidLength
+	}
+	sum := 0
+	for i := 0; i < len(data); i++ {
+		v, ok := code39Value(data[i])
+		if !ok {
+			return 0, ErrInvalidDigit
+		}
+		sum += v
+	}
+	return code39Char(sum % 43), nil
+}
+
+// CheckCode39 reports whether s is Code 39 data with a valid trailing
+// mod-43 check character. s should not include the start/stop '*'
+// delimiters; strip those before calling.
+func CheckCode39(s string) error {
+	if len(s) < 2 {
+		return ErrInvalidLength
+	}
+	want, err := Code39CheckChar(s[:len(s)-1])
+	if err != nil {
+		return err
+	}
+	got := s[len(s)-1]
+	if _, ok := code39Value(got); !ok {
+		return ErrInvalidDigit
+	}
+	if got != want {
+		return ErrChecksumMismatch
+	}
+	return nil
+}
+
+// ValidateCode39 is a convenience wrapper around CheckCode39.
+func ValidateCode39(s string) bool {
+	return CheckCode39(s) == nil
 }

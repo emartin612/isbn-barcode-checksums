@@ -15,6 +15,7 @@ const (
 	KindISBN10
 	KindISBN13
 	KindUPCA
+	KindISSN
 )
 
 func (k Kind) String() string {
@@ -25,6 +26,8 @@ func (k Kind) String() string {
 		return "ISBN-13"
 	case KindUPCA:
 		return "UPC-A"
+	case KindISSN:
+		return "ISSN"
 	default:
 		return "unknown"
 	}
@@ -40,9 +43,10 @@ type Result struct {
 
 // ValidateStream reads newline-separated codes from r, one at a time, and
 // calls fn with the result of checking each non-blank line. The format is
-// picked per line from its cleaned length (10 digits -> ISBN-10, 12 ->
-// UPC-A, 13 -> ISBN-13); anything else is reported as KindUnknown with
-// ErrInvalidLength.
+// picked per line from its cleaned length (8 digits -> ISSN, 10 -> ISBN-10,
+// 12 -> UPC-A, 13 -> ISBN-13); anything else is reported as KindUnknown
+// with ErrInvalidLength. Code 39 isn't included here because its data
+// isn't purely numeric, so length alone can't identify it.
 //
 // Only the current line is ever held in memory, so this is safe to run
 // against a barcode list of any size without buffering the whole thing:
@@ -65,6 +69,9 @@ func ValidateStream(r io.Reader, fn func(Result) error) error {
 		res := Result{Line: line, Raw: raw}
 
 		switch len(digits) {
+		case 8:
+			res.Kind = KindISSN
+			res.Err = CheckISSN(digits)
 		case 10:
 			res.Kind = KindISBN10
 			res.Err = CheckISBN10(digits)
