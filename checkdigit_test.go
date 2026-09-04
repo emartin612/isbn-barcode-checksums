@@ -25,6 +25,19 @@ func TestISBN10CheckDigitX(t *testing.T) {
 	}
 }
 
+func TestGenerateISBN10(t *testing.T) {
+	got, err := GenerateISBN10("030640615")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "0306406152" {
+		t.Errorf("got %q, want %q", got, "0306406152")
+	}
+	if _, err := GenerateISBN10("03064061"); err != ErrInvalidLength {
+		t.Errorf("got err %v, want ErrInvalidLength", err)
+	}
+}
+
 func TestISBN13(t *testing.T) {
 	if !ValidateISBN13("978-0-306-40615-7") {
 		t.Error("expected valid ISBN-13")
@@ -34,12 +47,38 @@ func TestISBN13(t *testing.T) {
 	}
 }
 
+func TestGenerateISBN13(t *testing.T) {
+	got, err := GenerateISBN13("978030640615")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "9780306406157" {
+		t.Errorf("got %q, want %q", got, "9780306406157")
+	}
+	if _, err := GenerateISBN13("97803064061"); err != ErrInvalidLength {
+		t.Errorf("got err %v, want ErrInvalidLength", err)
+	}
+}
+
 func TestUPCA(t *testing.T) {
 	if !ValidateUPCA("036000291452") {
 		t.Error("expected valid UPC-A")
 	}
 	if ValidateUPCA("036000291453") {
 		t.Error("expected invalid UPC-A (wrong check digit)")
+	}
+}
+
+func TestGenerateUPCA(t *testing.T) {
+	got, err := GenerateUPCA("03600029145")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "036000291452" {
+		t.Errorf("got %q, want %q", got, "036000291452")
+	}
+	if _, err := GenerateUPCA("0360002914"); err != ErrInvalidLength {
+		t.Errorf("got err %v, want ErrInvalidLength", err)
 	}
 }
 
@@ -70,6 +109,23 @@ func TestISSNCheckDigitX(t *testing.T) {
 	}
 }
 
+func TestGenerateISSN(t *testing.T) {
+	got, err := GenerateISSN("0378595")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "03785955" {
+		t.Errorf("got %q, want %q", got, "03785955")
+	}
+	got, err = GenerateISSN("1000002")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "1000002X" {
+		t.Errorf("got %q, want %q", got, "1000002X")
+	}
+}
+
 func TestCode39(t *testing.T) {
 	digit, err := Code39CheckChar("CODE39")
 	if err != nil {
@@ -89,6 +145,22 @@ func TestCode39(t *testing.T) {
 	}
 	if ValidateCode39("ABC?1") {
 		t.Error("expected invalid Code 39 data (character outside the set)")
+	}
+}
+
+func TestGenerateCode39(t *testing.T) {
+	got, err := GenerateCode39("CODE39")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "CODE39W" {
+		t.Errorf("got %q, want %q", got, "CODE39W")
+	}
+	if _, err := GenerateCode39(""); err != ErrInvalidLength {
+		t.Errorf("got err %v, want ErrInvalidLength", err)
+	}
+	if _, err := GenerateCode39("ABC?"); err != ErrInvalidDigit {
+		t.Errorf("got err %v, want ErrInvalidDigit", err)
 	}
 }
 

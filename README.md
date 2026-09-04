@@ -47,6 +47,17 @@ digit, err := checkdigit.ISBN13CheckDigit("978030640615")
 // digit == '7'
 ```
 
+Or get the full code back in one call, prefix and check digit together:
+
+```go
+code, err := checkdigit.GenerateISBN13("978030640615")
+// code == "9780306406157"
+```
+
+Every format has a matching `Generate*` function (`GenerateISBN10`,
+`GenerateISBN13`, `GenerateUPCA`, `GenerateISSN`, `GenerateCode39`), each
+taking the same prefix length its `*CheckDigit` counterpart expects.
+
 Check a whole file of codes, one per line, without reading it into memory
 first:
 

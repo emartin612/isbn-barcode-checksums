@@ -89,6 +89,16 @@ func ValidateISBN10(s string) bool {
 	return CheckISBN10(s) == nil
 }
 
+// GenerateISBN10 appends the check character to a 9-digit ISBN-10 prefix,
+// returning the full 10-character code.
+func GenerateISBN10(prefix string) (string, error) {
+	check, err := ISBN10CheckDigit(prefix)
+	if err != nil {
+		return "", err
+	}
+	return prefix + string(check), nil
+}
+
 // mod10CheckDigit implements the check-digit algorithm shared by EAN-13
 // (and therefore ISBN-13) and UPC-A: alternating weights of 1 and 3 (or 3
 // and 1, depending on where the format starts counting), then rounding the
@@ -153,6 +163,16 @@ func ValidateISBN13(s string) bool {
 	return CheckISBN13(s) == nil
 }
 
+// GenerateISBN13 appends the check digit to a 12-digit ISBN-13 (or EAN-13)
+// prefix, returning the full 13-digit code.
+func GenerateISBN13(prefix string) (string, error) {
+	check, err := ISBN13CheckDigit(prefix)
+	if err != nil {
+		return "", err
+	}
+	return prefix + string(check), nil
+}
+
 // UPCACheckDigit computes the check digit for an 11-digit UPC-A prefix.
 func UPCACheckDigit(prefix string) (byte, error) {
 	if len(prefix) != 11 {
@@ -186,6 +206,16 @@ func CheckUPCA(s string) error {
 // ValidateUPCA is a convenience wrapper around CheckUPCA.
 func ValidateUPCA(s string) bool {
 	return CheckUPCA(s) == nil
+}
+
+// GenerateUPCA appends the check digit to an 11-digit UPC-A prefix,
+// returning the full 12-digit code.
+func GenerateUPCA(prefix string) (string, error) {
+	check, err := UPCACheckDigit(prefix)
+	if err != nil {
+		return "", err
+	}
+	return prefix + string(check), nil
 }
 
 // ISSNCheckDigit computes the check character for a 7-digit ISSN prefix
@@ -241,6 +271,16 @@ func CheckISSN(s string) error {
 // ValidateISSN is a convenience wrapper around CheckISSN.
 func ValidateISSN(s string) bool {
 	return CheckISSN(s) == nil
+}
+
+// GenerateISSN appends the check character to a 7-digit ISSN prefix,
+// returning the full 8-character code.
+func GenerateISSN(prefix string) (string, error) {
+	check, err := ISSNCheckDigit(prefix)
+	if err != nil {
+		return "", err
+	}
+	return prefix + string(check), nil
 }
 
 // code39Value returns the position (0-42) of c in the Code 39 character
@@ -340,4 +380,14 @@ func CheckCode39(s string) error {
 // ValidateCode39 is a convenience wrapper around CheckCode39.
 func ValidateCode39(s string) bool {
 	return CheckCode39(s) == nil
+}
+
+// GenerateCode39 appends the mod-43 check character to Code 39 data,
+// returning the full string (still without the start/stop '*' delimiters).
+func GenerateCode39(data string) (string, error) {
+	check, err := Code39CheckChar(data)
+	if err != nil {
+		return "", err
+	}
+	return data + string(check), nil
 }
