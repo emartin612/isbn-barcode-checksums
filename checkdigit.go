@@ -1,6 +1,6 @@
 // Package checkdigit computes and verifies the check digits used by common
 // book and retail barcode formats: ISBN-10, ISBN-13 (which shares its
-// algorithm with EAN-13), UPC-A, ISSN, and Code 39.
+// algorithm with EAN-13), UPC-A, EAN-8, ISSN, and Code 39.
 package checkdigit
 
 import "errors"
@@ -212,6 +212,52 @@ func ValidateUPCA(s string) bool {
 // returning the full 12-digit code.
 func GenerateUPCA(prefix string) (string, error) {
 	check, err := UPCACheckDigit(prefix)
+	if err != nil {
+		return "", err
+	}
+	return prefix + string(check), nil
+}
+
+// EAN8CheckDigit computes the check digit for a 7-digit EAN-8 prefix. The
+// weights start at 3 on the leftmost digit, same as UPC-A.
+func EAN8CheckDigit(prefix string) (byte, error) {
+	if len(prefix) != 7 {
+		return 0, ErrInvalidLength
+	}
+	if !allDigits(prefix) {
+		return 0, ErrInvalidDigit
+	}
+	return mod10CheckDigit(prefix, 3), nil
+}
+
+// CheckEAN8 reports whether s is a valid 8-digit EAN-8 number.
+func CheckEAN8(s string) error {
+	digits := Clean(s)
+	if len(digits) != 8 {
+		return ErrInvalidLength
+	}
+	want, err := EAN8CheckDigit(digits[:7])
+	if err != nil {
+		return err
+	}
+	if !allDigits(digits[7:]) {
+		return ErrInvalidDigit
+	}
+	if digits[7] != want {
+		return ErrChecksumMismatch
+	}
+	return nil
+}
+
+// ValidateEAN8 is a convenience wrapper around CheckEAN8.
+func ValidateEAN8(s string) bool {
+	return CheckEAN8(s) == nil
+}
+
+// GenerateEAN8 appends the check digit to a 7-digit EAN-8 prefix, returning
+// the full 8-digit code.
+func GenerateEAN8(prefix string) (string, error) {
+	check, err := EAN8CheckDigit(prefix)
 	if err != nil {
 		return "", err
 	}

@@ -16,6 +16,7 @@ const (
 	KindISBN13
 	KindUPCA
 	KindISSN
+	KindEAN8
 )
 
 func (k Kind) String() string {
@@ -28,6 +29,8 @@ func (k Kind) String() string {
 		return "UPC-A"
 	case KindISSN:
 		return "ISSN"
+	case KindEAN8:
+		return "EAN-8"
 	default:
 		return "unknown"
 	}
@@ -43,8 +46,8 @@ type Result struct {
 
 // ValidateStream reads newline-separated codes from r, one at a time, and
 // calls fn with the result of checking each non-blank line. The format is
-// picked per line from its cleaned length (8 digits -> ISSN, 10 -> ISBN-10,
-// 12 -> UPC-A, 13 -> ISBN-13); anything else is reported as KindUnknown
+// picked per line from its cleaned length (8 digits -> ISSN or EAN-8, 10 ->
+// ISBN-10, 12 -> UPC-A, 13 -> ISBN-13); anything else is reported as KindUnknown
 // with ErrInvalidLength. Code 39 isn't included here because its data
 // isn't purely numeric, so length alone can't identify it.
 //
@@ -70,8 +73,14 @@ func ValidateStream(r io.Reader, fn func(Result) error) error {
 
 		switch len(digits) {
 		case 8:
+			// ISSN and EAN-8 are both 8 characters. Accept the line if
+			// either check passes; if both fail, report the ISSN error.
 			res.Kind = KindISSN
 			res.Err = CheckISSN(digits)
+			if res.Err != nil && CheckEAN8(digits) == nil {
+				res.Kind = KindEAN8
+				res.Err = nil
+			}
 		case 10:
 			res.Kind = KindISBN10
 			res.Err = CheckISBN10(digits)

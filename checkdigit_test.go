@@ -164,6 +164,61 @@ func TestGenerateCode39(t *testing.T) {
 	}
 }
 
+func TestEAN8(t *testing.T) {
+	if !ValidateEAN8("7351 3537") {
+		t.Error("expected valid EAN-8")
+	}
+	if err := CheckEAN8("73513538"); err != ErrChecksumMismatch {
+		t.Errorf("got err %v, want ErrChecksumMismatch", err)
+	}
+	if err := CheckEAN8("7351353"); err != ErrInvalidLength {
+		t.Errorf("got err %v, want ErrInvalidLength", err)
+	}
+	if err := CheckEAN8("7351A537"); err != ErrInvalidDigit {
+		t.Errorf("got err %v, want ErrInvalidDigit", err)
+	}
+}
+
+func TestGenerateEAN8(t *testing.T) {
+	got, err := GenerateEAN8("7351353")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "73513537" {
+		t.Errorf("got %q, want %q", got, "73513537")
+	}
+	if _, err := GenerateEAN8("735135"); err != ErrInvalidLength {
+		t.Errorf("got err %v, want ErrInvalidLength", err)
+	}
+}
+
+func TestValidateStreamEightDigits(t *testing.T) {
+	// The first is a valid EAN-8 (and not a valid ISSN); the second is a
+	// valid ISSN; the third fails both and should be reported as an ISSN.
+	input := "73513537\n0378-5955\n73513538\n"
+
+	var results []Result
+	err := ValidateStream(strings.NewReader(input), func(r Result) error {
+		results = append(results, r)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("ValidateStream returned error: %v", err)
+	}
+	if len(results) != 3 {
+		t.Fatalf("expected 3 results, got %d", len(results))
+	}
+	if results[0].Kind != KindEAN8 || results[0].Err != nil {
+		t.Errorf("line 1: got kind %v err %v", results[0].Kind, results[0].Err)
+	}
+	if results[1].Kind != KindISSN || results[1].Err != nil {
+		t.Errorf("line 2: got kind %v err %v", results[1].Kind, results[1].Err)
+	}
+	if results[2].Kind != KindISSN || results[2].Err != ErrChecksumMismatch {
+		t.Errorf("line 3: got kind %v err %v", results[2].Kind, results[2].Err)
+	}
+}
+
 func TestValidateStream(t *testing.T) {
 	input := strings.Join([]string{
 		"0-306-40615-2",  // valid ISBN-10
